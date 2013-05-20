@@ -1,13 +1,13 @@
-class Object 
-  def eigenclass 
+class Object
+  def eigenclass
     class << self; self; end
   end
-  
+
   def method_owner(method_name)
     instance_method(method_name.to_sym).owner
   rescue NameError
   end
-  
+
   #Ruby 2.0 Module.const_get supports A::B syntax. Older versions do not so walk the list.
   def self.constantize_classes(class_names)
     if RUBY_VERSION == '2.0.0'
@@ -49,7 +49,7 @@ class Instrumentator
       EVAL
     end
   end
- 
+
   def self.target_class_constant
     @klass ||= constantize_classes(@class_names)
   end
@@ -57,7 +57,7 @@ class Instrumentator
   def self.increment_call_count
     @call_count += 1
   end
-  
+
   def self.instance_scope?
     (@scope == '#')
   end
@@ -69,13 +69,13 @@ class Instrumentator
     return unless method_owner = target.method_owner(method_name)
     return if @installed.include?([method_owner, method_name])
     @currently_instrumenting = true
-    
+
     yield(method_owner)
-    
+
     @installed << [method_owner, method_name]
-    @currently_instrumenting = false  
+    @currently_instrumenting = false
   end
-  
+
   private_class_method :instrumenting
 
   def self.scrubbed_method_name
@@ -94,15 +94,15 @@ class Instrumentator
         method_name_trailing_punctuation_removed
     end
   end
-  
+
   private_class_method :scrubbed_method_name
-  
+
   def self.install_dynamic_hooks
     Module.class_eval do
       def included(base)
         instrument(base)
       end
-      
+
       if RUBY_VERSION == '2.0.0'
         #Ruby 2.0 introduced the ability to prepend Modules into classes
         def prepended(base)
@@ -128,11 +128,11 @@ class Instrumentator
         Instrumentator.install_method_instrumentation
       end
     end
-    
+
     Class.class_eval do
       def inherited(base)
         super if defined?(super)
-        
+
         if Instrumentator.target_class_constant == base
           Instrumentator.install_method_instrumentation
 
@@ -146,7 +146,7 @@ class Instrumentator
             def singleton_method_added(method_name)
               if method_name.to_s == Instrumentator.method_name
                 Instrumentator.install_method_instrumentation
-              end 
+              end
             end
           end
 
