@@ -9,12 +9,12 @@ class Object
   end
   
   #Ruby 2.0 Module.const_get supports A::B syntax. Older versions do not so walk the list.
-  def self.constantize_classes
+  def self.constantize_classes(class_names)
     if RUBY_VERSION == '2.0.0'
-      Module.const_get(@class_names)
+      Module.const_get(class_names)
     else
       classes = [Module]
-      @class_names.split('::').each { |klass_str| classes << classes.last.const_get(klass_str) }
+      class_names.split('::').each { |klass_str| classes << classes.last.const_get(klass_str) }
       classes.last
     end
   rescue NameError
@@ -23,7 +23,7 @@ end
 
 class Instrumentator
   class << self
-    attr_reader :call_count, :method_name, :class_names, :scope
+    attr_reader :call_count, :method_name
   end
 
   private_class_method :new
@@ -51,17 +51,21 @@ class Instrumentator
   end
  
   def self.target_class_constant
-    @klass ||= constantize_classes
+    @klass ||= constantize_classes(@class_names)
   end
 
   def self.increment_call_count
     @call_count += 1
   end
+  
+  def self.instance_scope?
+    (@scope == '#')
+  end
 
   def self.instrumenting
     return if @currently_instrumenting
     return unless Instrumentator.target_class_constant
-    target = (Instrumentator.scope == '.') ? Instrumentator.target_class_constant.eigenclass : Instrumentator.target_class_constant
+    target = Instrumentator.instance_scope? ? Instrumentator.target_class_constant : Instrumentator.target_class_constant.eigenclass
     return unless method_owner = target.method_owner(method_name)
     return if @installed.include?([method_owner, method_name])
     @currently_instrumenting = true
@@ -132,7 +136,7 @@ class Instrumentator
         if Instrumentator.target_class_constant == base
           Instrumentator.install_method_instrumentation
 
-          if Instrumentator.scope == '#'
+          if Instrumentator.instance_scope?
             def method_added(method_name)
               if method_name.to_s == Instrumentator.method_name
                 Instrumentator.install_method_instrumentation
