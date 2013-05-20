@@ -59,7 +59,7 @@ class Instrumentator
   end
 
   def self.instance_scope?
-    (@scope == '#')
+    @scope == '#'
   end
 
   def self.instrumenting
